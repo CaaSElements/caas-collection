@@ -60,11 +60,21 @@
 
           hasChanges: [[hasChanges]]
 
-          <button on-tap="changeFirstName">change #0 first name to 'Sam'</button><br>
-          <button on-tap="update">update</button>
-          <button on-tap="addAccountmanager">Add an accountmanager</button>
-          <button on-tap="deleteAccountmanager">Remove the first accountmanager</button>
-
+          <ul>
+            <li>
+              <button on-tap="changeFirstName">change #0 first name to 'Sam'</button>
+            </li>
+            <li>
+            <button on-tap="update">update</button>
+            </li>
+            <li>
+            <button on-tap="addAccountmanager">Add an accountmanager</button>
+            </li>
+            <li>
+            <button on-tap="deleteAccountmanager">Remove the first accountmanager</button>
+            </li>                           
+          </ul>
+          
           <ul>
           <template is="dom-repeat" items="[[documents]]" as="document">
             <li>[[document.firstName]] <strong>[[document.lastName]]</strong></li>
