@@ -31,10 +31,12 @@
           api-endpoint="[[apiEndpoint]]"
           access-token="[[accessToken]]"
           auth="[[auth]]"
-          route="[[apiEndpoint]]/[[route]]/[[document.id]]"
+          route="[[route]]/[[document.id]]"
           debounce-duration="[[debounceDuration]]"
           document="{{document}}"
           auto-update="[[autoUpdate]]"
+          on-updated="_handleDocumentUpdated"
+          on-update-error="_handleDocumentUpdateError"
         ></caas-document>
       </template>
 
@@ -86,7 +88,7 @@
 
         _updateTimer: {
           type: Object
-        }
+        },
 
       },
 
@@ -100,16 +102,29 @@
 
       update: function() {
         this._diffDocuments();
-        while(this.changedDocuments.length > 0) {
-          this.updateItem(0);          
+        for(var i=0;i<this.changedDocuments.length;i++) {
+          this.updateItem(i);
         }
+      },
+
+      _handleDocumentUpdated: function(evt) {
+        var documentId = evt.target.document.id;
+        var changedDocumentsIds = this._getChangedDocumentIds();
+        var existingIndex = changedDocumentsIds.indexOf(documentId);
+        if(existingIndex !== -1) {
+          this._removeChangedDocument(this.changedDocuments[existingIndex]);
+        }
+      },
+
+      _handleDocumentUpdateError: function(evt) {
+        //console.log('_handleDocumentUpdateError', evt.target.document);
       },
 
       updateItem: function(i) {
         var documentIndex = this.changedDocuments[i].index;
         var caasDoc = this.querySelectorAll('caas-document')[documentIndex];
-        this._removeChangedDocument(this.changedDocuments[i]);
         caasDoc.notifyProperties();
+        caasDoc.update();
       },
 
       _computeHasChanges: function(changedDocumentsSplices) {
@@ -123,8 +138,15 @@
       },
 
       _diffDocuments: function() {
-        for(var i in this.documents) {
-          this._diffItem(i);
+        if(!this._shadowDocuments || this._shadowDocuments.length === 0) {
+          this.set('_shadowDocuments', []);
+          for(var i=0;i<this.documents.length;i++) {
+            this._shadowDocuments.push(JSON.stringify(this.documents[i]));
+          }
+        } else {
+          for(var i=0;i<this.documents.length;i++) {
+            this._diffItem(i);
+          }          
         }
       },
 
@@ -164,6 +186,7 @@
 
       _resetUpdateInterval: function(trackChanges, autoUpdate, updateInterval) {
         window.clearInterval(this._updateTimer);
+        this._diffDocuments();            
         if(!trackChanges) return;
         this._updateTimer = window.setInterval((function() {
           if(autoUpdate) {
