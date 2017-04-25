@@ -60,12 +60,12 @@
 
         hasChanges: {
           type: Boolean,
-          computed: '_computeHasChanges(changedDocuments.splices)',
+          computed: '_computeHasChanges(unsavedDocuments.splices)',
           observer: '_hasChangesChanged',
           notify: true
         },
 
-        changedDocuments: {
+        unsavedDocuments: {
           type: Array,
           value: [],
           notify: true
@@ -102,17 +102,17 @@
 
       update: function() {
         this._diffDocuments();
-        for(var i=0;i<this.changedDocuments.length;i++) {
+        for(var i=0;i<this.unsavedDocuments.length;i++) {
           this.updateItem(i);
         }
       },
 
       _handleDocumentUpdated: function(evt) {
         var documentId = evt.target.document.id;
-        var changedDocumentsIds = this._getChangedDocumentIds();
-        var existingIndex = changedDocumentsIds.indexOf(documentId);
+        var unsavedDocumentsIds = this._getChangedDocumentIds();
+        var existingIndex = unsavedDocumentsIds.indexOf(documentId);
         if(existingIndex !== -1) {
-          this._removeChangedDocument(this.changedDocuments[existingIndex]);
+          this._removeChangedDocument(this.unsavedDocuments[existingIndex]);
         }
       },
 
@@ -121,14 +121,14 @@
       },
 
       updateItem: function(i) {
-        var documentIndex = this.changedDocuments[i].index;
+        var documentIndex = this.unsavedDocuments[i].index;
         var caasDoc = this.querySelectorAll('caas-document')[documentIndex];
         caasDoc.notifyProperties();
         caasDoc.update();
       },
 
-      _computeHasChanges: function(changedDocumentsSplices) {
-        return (this.changedDocuments.length > 0);
+      _computeHasChanges: function(unsavedDocumentsSplices) {
+        return (this.unsavedDocuments.length > 0);
       },
 
       _hasChangesChanged: function(hasChanges) {
@@ -162,10 +162,10 @@
       },
 
       _addChangedDocument: function(documentId, i) {
-        var changedDocumentsIds = this._getChangedDocumentIds();
-        var existingIndex = changedDocumentsIds.indexOf(documentId);
+        var unsavedDocumentsIds = this._getChangedDocumentIds();
+        var existingIndex = unsavedDocumentsIds.indexOf(documentId);
         if(existingIndex === -1) {
-          this.push('changedDocuments', {
+          this.push('unsavedDocuments', {
             index: i,
             id: documentId
           });
@@ -173,13 +173,13 @@
       },
 
       _removeChangedDocument: function(changedDocument) {
-        var changedDocumentsIds = this._getChangedDocumentIds();
-        var existingIndex = changedDocumentsIds.indexOf(changedDocument.id);
-        this.splice('changedDocuments', existingIndex, 1);
+        var unsavedDocumentsIds = this._getChangedDocumentIds();
+        var existingIndex = unsavedDocumentsIds.indexOf(changedDocument.id);
+        this.splice('unsavedDocuments', existingIndex, 1);
       },
 
       _getChangedDocumentIds: function(documentId) {
-        return this.changedDocuments.map(function(changedDocument) {
+        return this.unsavedDocuments.map(function(changedDocument) {
           return changedDocument.id;
         })
       },
