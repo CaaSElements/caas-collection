@@ -27,6 +27,7 @@
             route="accountmanagers"
             documents="{{documents}}"
             auto-read
+            auto-update
           ></caas-collection>
 
           <button on-tap="changeFirstName">change #0 first name</button>
@@ -40,7 +41,7 @@
           <script>
             demo.changeFirstName = function() {
               demo.documents[0].firstName = 'Sam';
-              caasCollection.updateItem(0);
+              caasCollection.update();
             }
           </script>
 

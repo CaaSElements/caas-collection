@@ -34,6 +34,7 @@
           route="[[apiEndpoint]]/[[route]]/[[document.id]]"
           debounce-duration="[[debounceDuration]]"
           document="{{document}}"
+          auto-update="[[autoUpdate]]"
         ></caas-document>
       </template>
 
@@ -55,15 +56,53 @@
           notify: true
         },
 
+        updateInterval: {
+          type: Number,
+          value: 3000
+        },
+
+        _shadowDocuments: {
+          type: Array,
+          value: []
+        },
+
+        _updateTimer: {
+          type: Object
+        }
+
       },
+
+      observers: [
+        '_resetUpdateInterval(autoUpdate, updateInterval)'
+      ],
 
       read: function() {
         this._sendAjaxRequest('read');
       },
 
-      updateItem: function(index) {
-        var caasDoc = this.querySelectorAll('caas-document')[index];
+      update: function() {
+        for(var i in this.documents) {
+          this.updateItem(i);
+        }
+      },
+
+      updateItem: function(i) {
+        var masterDocument = JSON.stringify(this.documents[i]);
+        var shadowDocument = this._shadowDocuments[i];
+        
+        if(masterDocument === shadowDocument) return;
+
+        var caasDoc = this.querySelectorAll('caas-document')[i];
         caasDoc.notifyProperties();
+        this._shadowDocuments[i] = masterDocument;
+      },
+
+      _resetUpdateInterval: function(autoUpdate, updateInterval) {
+        window.clearInterval(this._updateTimer);
+        if(!autoUpdate) return;
+        this._updateTimer = window.setInterval((function() {
+          this.update();
+        }).bind(this), updateInterval);
       }
 
     });
