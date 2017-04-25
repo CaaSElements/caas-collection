@@ -11,6 +11,7 @@
     <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
     <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
     <link rel="import" href="../caas-collection.html">
+    <link rel="import" href="../../caas-auth/caas-auth.html">
 
     <style is="custom-style" include="demo-pages-shared-styles">
     </style>
@@ -21,6 +22,30 @@
       <demo-snippet>
         <template is="dom-bind" id="demo">
 
+          <caas-auth
+            id="auth"
+            api-endpoint="http://canapi.local"
+            signed-in="{{signedIn}}"
+            access-token="{{accessToken}}"
+            user-id="{{investorId}}"
+          ></caas-auth>          
+
+          <h2>Sign in</h2>
+
+          <template is="dom-if" if="[[!signedIn]]">
+            <form on-submit="signIn">
+              <label for="username">username</label><br>
+              <input type="text" id="username" value="investor@caastest.local"><p>
+              <label for="password">password</label><br>
+              <input type="password" id="password" value="abc123"><p>
+              <input type="submit" value="Sign In">
+            </form>
+          </template>
+            
+          <template is="dom-if" if="[[signedIn]]">
+            <label for="token">signed in</label><br>
+          </template>          
+
           <caas-collection
             id="caasCollection"
             api-endpoint="http://canapi.local"
@@ -28,14 +53,17 @@
             documents="{{documents}}"
             has-changes="{{hasChanges}}"
             track-changes
-            auto-update
             auto-read
+            auto-update            
+            auth            
           ></caas-collection>
 
-          hasChanges: [[hasChanges]]<p>
+          hasChanges: [[hasChanges]]
 
           <button on-tap="changeFirstName">change #0 first name to 'Sam'</button><br>
           <button on-tap="update">update</button>
+          <button on-tap="addAccountmanager">Add an accountmanager</button>
+          <button on-tap="deleteAccountmanager">Remove the first accountmanager</button>
 
           <ul>
           <template is="dom-repeat" items="[[documents]]" as="document">
@@ -44,13 +72,38 @@
           </ul>
 
           <script>
-            demo.changeFirstName = function() {
+            var d = document.querySelector('#demo');
+            var auth = document.querySelector('#auth');
+            
+            d.changeFirstName = function() {
               demo.documents[0].firstName = 'Sam';
             }
 
             demo.update = function() {
               caasCollection.update();
             }
+
+            d.addAccountmanager = function () {
+              caasCollection.createDocument({'firstName':'Sam', 'lastName':'Prinssen'});
+            }            
+
+            d.deleteAccountmanager = function () {
+              caasCollection.deleteDocument(10);
+            }            
+
+            d.signIn = function(evt) {
+              evt.preventDefault();
+              auth.signIn(
+                document.querySelector('#username').value,
+                document.querySelector('#password').value,
+                'investor'
+              );
+            }
+        
+            auth.addEventListener('sign-in-error', function(data) {
+              alert('error while logging in!');
+            })
+
           </script>
 
         </template>
