@@ -105,7 +105,7 @@
         this._sendAjaxRequest('read');
       },
 
-      update: function() {
+      save: function() {
         this._diffDocuments();
         for(var i=0;i<this.unsavedDocuments.updates.length;i++) {
           this.updateItem(i);
@@ -141,7 +141,7 @@
 
       _hasChangesChanged: function(hasChanges) {
         if(hasChanges && this.autoUpdate) {
-          this.update();
+          this.save();
         }
       },
 
@@ -202,7 +202,7 @@
         if(!trackChanges) return;
         this._updateTimer = window.setInterval((function() {
           if(autoUpdate) {
-            this.update();
+            this.save();
           } else {
             this._diffDocuments();
           }
