@@ -123,6 +123,25 @@
         }
       },
 
+      _handleAddedDocuments: function (addedCount, index, objects) {
+        for (var i=0; i < addedCount; i++) {
+          var addedIndex = index + i;
+          var newDocument = objects[addedIndex];
+
+          // if newDoc has an id, it's already somewhere in the database
+          if(!newDocument.id) return this._sendAjaxRequest('create', newDocument);
+        }
+      },
+
+      _handleDeleteResponseError: function(evt, deleteRequest) {
+        this.fire('delete-error', this._parseErrorObject(evt));
+        
+        var id = this._getDocumentIdFromAjaxRequest(deleteRequest)
+        var bufferedData = this._removedDocumentsBuffer[id];
+        this.splice('documents', bufferedData.index, 0, bufferedData.doc)
+        this._removeDocumentFromBuffer(id);
+      },           
+
       _handleCreateResponse: function(evt) {
         this.fire('created');
       },      
