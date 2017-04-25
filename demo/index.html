@@ -57,6 +57,8 @@
           ></caas-collection>
 
           <button on-tap="changeFirstName">change #0 first name</button>
+          <button on-tap="addAccountmanager">Add an accountmanager</button>
+          <button on-tap="deleteAccountmanager">Remove the first accountmanager</button>
 
           <ul>
           <template is="dom-repeat" items="[[documents]]" as="document">
@@ -65,11 +67,22 @@
           </ul>
 
           <script>
-            demo.changeFirstName = function() {
+            var d = document.querySelector('#demo');
             var auth = document.querySelector('#auth');
+            
+            d.changeFirstName = function() {
               demo.documents[0].firstName = 'Sam';
               caasCollection.update();
             }
+
+            d.addAccountmanager = function () {
+              caasCollection.createDocument({'firstName':'Sam', 'lastName':'Prinssen'});
+            }            
+
+            d.deleteAccountmanager = function () {
+              caasCollection.deleteDocument(10);
+            }            
+
             d.signIn = function(evt) {
               evt.preventDefault();
               auth.signIn(
