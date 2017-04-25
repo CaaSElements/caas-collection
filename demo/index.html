@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>caas-collection demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../caas-collection.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+      <h3>Basic caas-collection demo</h3>
+      <demo-snippet>
+        <template is="dom-bind" id="demo">
+
+          <caas-collection
+            id="caasCollection"
+            api-endpoint="http://canapi.local"
+            route="accountmanagers"
+            documents="{{documents}}"
+            auto-read
+          ></caas-collection>
+
+          <button on-tap="changeFirstName">change #0 first name</button>
+
+          <ul>
+          <template is="dom-repeat" items="[[documents]]" as="document">
+            <li>[[document.firstName]] <strong>[[document.lastName]]</strong></li>
+          </template>
+          </ul>
+
+          <script>
+            demo.changeFirstName = function() {
+              demo.documents[0].firstName = 'Sam';
+              caasCollection.updateItem(0);
+            }
+          </script>
+
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,210 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../caas-auth-behavior/caas-auth-behavior.html">
+<link rel="import" href="../caas-document/caas-document.html">
+
+<!--
+`caas-collection`
+
+
+@demo demo/index.html 
+-->
+
+<dom-module id="caas-collection">
+  <template>
+
+      <iron-ajax
+        id="readDocuments"
+        headers="[[_requestHeaders]]"
+        url="[[apiEndpoint]]/[[route]]"
+        method="GET"
+        last-response="{{documents}}"
+        debounce-duration="[[debounceDuration]]"
+        auto="[[autoRead]]"
+        loading="{{reading}}"
+        on-response="_handleReadResponse"
+        on-error="_handleReadResponseError"
+      ></iron-ajax>
+
+      <template is="dom-repeat" items="{{documents}}" as="document">
+        <caas-document
+          api-endpoint="[[apiEndpoint]]"
+          access-token="[[accessToken]]"
+          auth="[[auth]]"
+          route="[[apiEndpoint]]/[[route]]/[[document.id]]"
+          debounce-duration="[[debounceDuration]]"
+          document="{{document}}"
+        ></caas-document>
+      </template>
+
+  </template>
+  <script>
+    Polymer({
+
+      is: 'caas-collection',
+      behaviors: [CaasAuthBehavior],
+
+      properties: {
+
+        /**
+        * The server side API endpoint
+        */
+        apiEndpoint: {
+          type: String,
+          value: null
+        },
+
+        /**
+        * The server route for the requested document
+        */
+        route: {
+          type: String,
+          value: null          
+        },
+
+        /**
+        * If true, `read()` will be called automatically
+        */
+        autoRead: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+        * If true, `update()` will be called when any value in the `document` object changed.
+        */
+        autoUpdate: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Length of time in milliseconds to debounce multiple automatically generated requests.
+         */
+        debounceDuration: {
+          type: Number,
+          value: 300
+        },
+
+        /**
+        * true if the response of `read()` is pending
+        */
+        reading: {
+          type: Boolean,
+          value: false,
+          notify: true
+        },
+
+        /**
+        * true if the response of `update()` is pending
+        */
+        updating: {
+          type: Boolean,
+          value: false,
+          notify: true
+        },
+
+        /**
+        * true if the response of `delete()` is pending
+        */
+        deleting: {
+          type: Boolean,
+          value: false,
+          notify: true
+        },
+
+        /**
+        * The documents array
+        */
+        documents: {
+          type: Array,
+          value: [],
+          notify: true
+        },
+
+        /**
+        * Determines whether auth headers should be sent along with a CRUD request
+        */
+        auth: {
+          type: Boolean,
+          value: false,
+          notify: true
+        },
+
+        _requestHeaders: {
+          type: Object,
+          computed: '_computeRequestHeaders(auth, accessToken, _authHeader)'
+        },
+
+        _readDebouncer: {
+          type: Object
+        }
+
+      },
+
+      read: function() {
+        this._sendAjaxRequest('read');
+      },
+
+      updateItem: function(index) {
+        var caasDoc = this.querySelectorAll('caas-document')[index];
+        caasDoc.notifyProperties();
+      },
+
+      _computeRequestHeaders: function(auth, accessToken, _authHeader) {
+        if(!auth || !accessToken) return {};
+        return _authHeader;
+      },
+
+      _sendAjaxRequest: function(crudOperation) {
+        switch(crudOperation) {
+          case 'read':
+            window.clearTimeout(this._readDebouncer);
+            this._readDebouncer = window.setTimeout((function() {
+              this.$.readDocument.generateRequest();
+            }).bind(this), this.debounceDuration);
+            break;
+        }
+      },
+
+      _getDocumentIndexById: function(documentId) {
+        for(var i in this.documents) {
+          if(this.documents[i].id === documentId) return i;
+        }
+        return false;
+      },
+
+      _handleReadResponse: function(evt) {
+        this.fire('read');
+      },
+
+      _handleReadResponseError: function(evt) {
+        this.fire('read-error', this._parseErrorObject(evt));
+      },
+
+      _parseErrorObject: function(responseEvent) {
+        var errorObject = {
+          status: responseEvent.detail.request.status,
+          message: responseEvent.detail.request.xhr.response
+        }
+        return errorObject;
+      }
+
+      /**
+       * Fired when a read response is received.
+       *
+       * @event read
+       */
+
+      /**
+       * Fired when a read error is received.
+       *
+       * @event read-error
+       * @param {Object} error
+       * @param {number} error.status Status Code
+       * @param {Object} error.message Error message
+       */
+
+    });
+  </script>
+</dom-module>
