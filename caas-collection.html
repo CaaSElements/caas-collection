@@ -83,7 +83,8 @@
       },
 
       observers: [
-        '_resetUpdateInterval(autoUpdate, updateInterval)'
+        '_resetUpdateInterval(autoUpdate, updateInterval)',
+        '_handleDocumentsSplices(documents.splices)'
       ],
 
       createDocument: function(doc) {
@@ -109,6 +110,17 @@
         this._shadowDocuments[i] = masterDocument;
         var caasDoc = this.querySelectorAll('caas-document')[i];
         caasDoc.notifyProperties();
+      },
+
+      _handleDocumentsSplices: function (documentsSplices) {
+        if (documentsSplices) {
+          var indexSplices = documentsSplices.indexSplices;
+
+          // indexSplices.length is always 1
+          var changes = indexSplices[0];
+          this._handleRemovedDocuments(changes.removed, changes.index)
+          this._handleAddedDocuments(changes.addedCount, changes.index, changes.object)
+        }
       },
 
       _handleCreateResponse: function(evt) {
