@@ -48,6 +48,16 @@
         ></caas-document>
       </template>
 
+      <iron-ajax
+        id="deleteDocument"
+        headers="[[_requestHeaders]]"
+        method="DELETE"
+        loading="{{deleting}}"
+        on-response="_handleDeleteResponse"
+        on-error="_handleDeleteResponseError"
+      ></iron-ajax>
+
+
   </template>
   <script>
     Polymer({
@@ -76,6 +86,11 @@
           value: []
         },
 
+        _removedDocumentsBuffer: {
+          type: Object,
+          value: {}
+        },
+
         _updateTimer: {
           type: Object
         }
@@ -99,14 +114,24 @@
         for(var i in this.documents) {
           this.updateItem(i);
         }
-      },
+      },   
 
+      deleteDocument: function(index) {
+        if(Number.isInteger(index)) this.splice('documents', index, 1);
+      },      
+
+      /**
+      * Delete `document`
+      */
+      delete: function() {
+        this._sendAjaxRequest('delete');
+      },             
+        
       updateItem: function(i) {
         var masterDocument = JSON.stringify(this.documents[i]);
         var shadowDocument = this._shadowDocuments[i];
         
         if(masterDocument === shadowDocument) return;
-
         this._shadowDocuments[i] = masterDocument;
         var caasDoc = this.querySelectorAll('caas-document')[i];
         caasDoc.notifyProperties();
@@ -118,12 +143,23 @@
 
           // indexSplices.length is always 1
           var changes = indexSplices[0];
+
           this._handleRemovedDocuments(changes.removed, changes.index)
           this._handleAddedDocuments(changes.addedCount, changes.index, changes.object)
         }
       },
 
-      _handleAddedDocuments: function (addedCount, index, objects) {
+      _handleRemovedDocuments: function (deletedDocuments, index) {
+        // Multiple documents can be removed with one splice
+        deletedDocuments.forEach(function(deletedDocument, i) {
+          var removedIndex = index + i;
+
+          this._addDocumentToBuffer(deletedDocument, removedIndex);
+          this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
+          this.delete()
+        }, this);
+      },
+      
       _handleAddedDocuments: function (addedCount, index, documents) {
         for (var i=0; i < addedCount; i++) {
           var addedIndex = index + i;
@@ -132,6 +168,24 @@
           // if newDoc has an id, it's already somewhere in the database
           if(!newDocument.id) return this._sendAjaxRequest('create', newDocument);
         }
+      },
+
+      _addDocumentToBuffer: function (doc, index) {
+        this.set('_removedDocumentsBuffer.' + doc.id, {'doc':doc, 'index': index});
+      },
+
+      _removeDocumentFromBuffer: function (id) {
+        delete this._removedDocumentsBuffer[id]        
+
+      },      
+
+      _handleDeleteResponse: function (evt, deleteRequest) {
+        this.fire('deleted');
+        this.$.deleteDocument.route = "";
+        this.$.deleteDocument.body = "";
+
+        var id = this._getDocumentIdFromAjaxRequest(deleteRequest)
+        this._removeDocumentFromBuffer(id);
       },
 
       _handleDeleteResponseError: function(evt, deleteRequest) {
@@ -157,7 +211,8 @@
         this._updateTimer = window.setInterval((function() {
           this.update();
         }).bind(this), updateInterval);
-      }
+      }      
+
       /**
        * Fired when a created response is received.
        *
