@@ -92,9 +92,9 @@
         
         if(masterDocument === shadowDocument) return;
 
+        this._shadowDocuments[i] = masterDocument;
         var caasDoc = this.querySelectorAll('caas-document')[i];
         caasDoc.notifyProperties();
-        this._shadowDocuments[i] = masterDocument;
       },
 
       _resetUpdateInterval: function(autoUpdate, updateInterval) {
