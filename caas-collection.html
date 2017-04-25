@@ -60,14 +60,18 @@
 
         hasChanges: {
           type: Boolean,
-          computed: '_computeHasChanges(unsavedDocuments.splices)',
+          computed: '_computeHasChanges(unsavedDocuments.updates.splices)',
           observer: '_hasChangesChanged',
           notify: true
         },
 
         unsavedDocuments: {
-          type: Array,
-          value: [],
+          type: Object,
+          value: {
+            creations: [],
+            updates: [],
+            deletions: []
+          },
           notify: true
         },
 
@@ -103,17 +107,17 @@
 
       update: function() {
         this._diffDocuments();
-        for(var i=0;i<this.unsavedDocuments.length;i++) {
+        for(var i=0;i<this.unsavedDocuments.updates.length;i++) {
           this.updateItem(i);
         }
       },
 
       _handleDocumentUpdated: function(evt) {
         var documentId = evt.target.document.id;
-        var unsavedDocumentsIds = this._getUnsavedDocumentIds();
-        var existingIndex = unsavedDocumentsIds.indexOf(documentId);
+        var unsavedDocumentsUpdatesIds = this._getUnsavedDocumentIds('updates');
+        var existingIndex = unsavedDocumentsUpdatesIds.indexOf(documentId);
         if(existingIndex !== -1) {
-          this._removeUnsavedDocument(this.unsavedDocuments[existingIndex]);
+          this._removeUnsavedDocument('updates', this.unsavedDocuments.updates[existingIndex]);
         }
       },
 
@@ -122,14 +126,17 @@
       },
 
       updateItem: function(i) {
-        var documentIndex = this.unsavedDocuments[i].index;
+        var documentIndex = this.unsavedDocuments.updates[i].index;
         var caasDoc = this.querySelectorAll('caas-document')[documentIndex];
         caasDoc.notifyProperties();
         caasDoc.update();
       },
 
       _computeHasChanges: function(unsavedDocumentsSplices) {
-        return (this.unsavedDocuments.length > 0);
+        for(var changeCategory in this.unsavedDocuments) {
+          if(this.unsavedDocuments[changeCategory].length > 0) return true;
+        }
+        return false;
       },
 
       _hasChangesChanged: function(hasChanges) {
@@ -161,30 +168,30 @@
         var documentId = this.documents[i].id;
 
         if(masterDocument !== shadowDocument) {
-          this._addUnsavedDocument(documentId, i);
+          this._addUnsavedDocument('updates', documentId, i);
           this._shadowDocuments[i] = masterDocument;
         }
       },
 
-      _addUnsavedDocument: function(documentId, i) {
-        var unsavedDocumentsIds = this._getUnsavedDocumentIds();
+      _addUnsavedDocument: function(changeCategory, documentId, i) {
+        var unsavedDocumentsIds = this._getUnsavedDocumentIds(changeCategory);
         var existingIndex = unsavedDocumentsIds.indexOf(documentId);
         if(existingIndex === -1) {
-          this.push('unsavedDocuments', {
+          this.push('unsavedDocuments.' + changeCategory , {
             index: i,
             id: documentId
           });
         }
       },
 
-      _removeUnsavedDocument: function(unsavedDocument) {
-        var unsavedDocumentsIds = this._getUnsavedDocumentIds();
+      _removeUnsavedDocument: function(changeCategory, unsavedDocument) {
+        var unsavedDocumentsIds = this._getUnsavedDocumentIds('updates');
         var existingIndex = unsavedDocumentsIds.indexOf(unsavedDocument.id);
-        this.splice('unsavedDocuments', existingIndex, 1);
+        this.splice('unsavedDocuments.' + changeCategory, existingIndex, 1);
       },
 
-      _getUnsavedDocumentIds: function(documentId) {
-        return this.unsavedDocuments.map(function(unsavedDocument) {
+      _getUnsavedDocumentIds: function(changeCategory) {
+        return this.unsavedDocuments[changeCategory].map(function(unsavedDocument) {
           return unsavedDocument.id;
         })
       },
