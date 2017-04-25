@@ -26,6 +26,16 @@
         on-error="_handleReadResponseError"
       ></iron-ajax>
 
+      <iron-ajax
+        id="createDocument"
+        headers="[[_requestHeaders]]"
+        url="[[apiEndpoint]]/[[route]]"
+        method="POST"
+        loading="{{creating}}"
+        on-response="_handleCreateResponse"
+        on-error="_handleCreateResponseError"
+      ></iron-ajax>
+
       <template is="dom-repeat" items="{{documents}}" as="document">
         <caas-document
           api-endpoint="[[apiEndpoint]]"
@@ -39,6 +49,16 @@
           on-update-error="_handleDocumentUpdateError"
         ></caas-document>
       </template>
+
+      <iron-ajax
+        id="deleteDocument"
+        headers="[[_requestHeaders]]"
+        method="DELETE"
+        loading="{{deleting}}"
+        on-response="_handleDeleteResponse"
+        on-error="_handleDeleteResponseError"
+      ></iron-ajax>
+
 
   </template>
   <script>
@@ -86,6 +106,11 @@
           value: []
         },
 
+        _removedDocumentsBuffer: {
+          type: Object,
+          value: {}
+        },
+
         _updateTimer: {
           type: Object
         },
@@ -93,8 +118,13 @@
       },
 
       observers: [
-        '_resetUpdateInterval(trackChanges, autoUpdate, updateInterval)'
+        '_resetUpdateInterval(trackChanges, autoUpdate, updateInterval)',
+        '_handleDocumentsSplices(documents.splices)'
       ],
+
+      createDocument: function(doc) {
+        this.push('documents', doc)
+      },  
 
       read: function() {
         this._sendAjaxRequest('read');
@@ -107,6 +137,17 @@
         }
       },
 
+      /**
+      * Delete `document`
+      */
+      deleteDocument: function(index) {
+        if(Number.isInteger(index)) this.splice('documents', index, 1);
+      },
+
+      _sendDeleteRequest: function() {
+        this._sendAjaxRequest('delete');
+      },
+
       _handleDocumentUpdated: function(evt) {
         var documentId = evt.target.document.id;
         var changedDocumentsIds = this._getChangedDocumentIds();
@@ -115,17 +156,86 @@
           this._removeChangedDocument(this.changedDocuments[existingIndex]);
         }
       },
-
       _handleDocumentUpdateError: function(evt) {
         //console.log('_handleDocumentUpdateError', evt.target.document);
       },
-
+        
       updateItem: function(i) {
         var documentIndex = this.changedDocuments[i].index;
         var caasDoc = this.querySelectorAll('caas-document')[documentIndex];
         caasDoc.notifyProperties();
         caasDoc.update();
       },
+
+  
+      _handleDocumentsSplices: function (documentsSplices) {
+        if (documentsSplices) {
+          var indexSplices = documentsSplices.indexSplices;
+
+          // indexSplices.length is always 1
+          var changes = indexSplices[0];
+
+          this._handleRemovedDocuments(changes.removed, changes.index)
+          this._handleAddedDocuments(changes.addedCount, changes.index, changes.object)
+        }
+      },   
+
+
+      _handleRemovedDocuments: function (deletedDocuments, index) {
+        // Multiple documents can be removed with one splice
+        deletedDocuments.forEach(function(deletedDocument, i) {
+          var removedIndex = index + i;
+
+          this._addDocumentToBuffer(deletedDocument, removedIndex);
+          this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
+          this._sendDeleteRequest()
+        }, this);
+      },
+      
+      _handleAddedDocuments: function (addedCount, index, documents) {
+        for (var i=0; i < addedCount; i++) {
+          var addedIndex = index + i;
+          var newDocument = documents[addedIndex];
+
+          // if newDoc has an id, it's already somewhere in the database
+          if(!newDocument.id) return this._sendAjaxRequest('create', newDocument);
+        }
+      },
+
+      _addDocumentToBuffer: function (doc, index) {
+        this.set('_removedDocumentsBuffer.' + doc.id, {'doc':doc, 'index': index});
+      },
+
+      _removeDocumentFromBuffer: function (id) {
+        delete this._removedDocumentsBuffer[id]        
+      },      
+
+      _handleDeleteResponse: function (evt, deleteRequest) {
+        this.fire('deleted');
+        this.$.deleteDocument.route = "";
+        this.$.deleteDocument.body = "";
+
+        var id = this._getDocumentIdFromAjaxRequest(deleteRequest)
+        this._removeDocumentFromBuffer(id);
+      },
+
+      _handleDeleteResponseError: function(evt, deleteRequest) {
+        this.fire('delete-error', this._parseErrorObject(evt));
+        
+        var id = this._getDocumentIdFromAjaxRequest(deleteRequest)
+        var bufferedData = this._removedDocumentsBuffer[id];
+        this.splice('documents', bufferedData.index, 0, bufferedData.doc)
+        this._removeDocumentFromBuffer(id);
+      },           
+
+      _handleCreateResponse: function(evt) {
+        this.fire('created');
+      },      
+
+      _handleCreateResponseError: function(evt) {
+        this.fire('create-error', this._parseErrorObject(evt));
+      },          
+         
 
       _computeHasChanges: function(changedDocumentsSplices) {
         return (this.changedDocuments.length > 0);
@@ -154,7 +264,6 @@
         var masterDocument = JSON.stringify(this.documents[i]);
         var shadowDocument = this._shadowDocuments[i];
         var documentId = this.documents[i].id;
-
         if(masterDocument !== shadowDocument) {
           this._addChangedDocument(documentId, i);
           this._shadowDocuments[i] = masterDocument;
@@ -171,7 +280,7 @@
           });
         }
       },
-
+      
       _removeChangedDocument: function(changedDocument) {
         var changedDocumentsIds = this._getChangedDocumentIds();
         var existingIndex = changedDocumentsIds.indexOf(changedDocument.id);
@@ -196,6 +305,21 @@
           }
         }).bind(this), updateInterval);
       }
+
+      /**
+       * Fired when a created response is received.
+       *
+       * @event created
+       */
+
+      /**
+       * Fired when a read error is received.
+       *
+       * @event create-error
+       * @param {Object} error
+       * @param {number} error.status Status Code
+       * @param {Object} error.message Error message
+       */       
 
     });
   </script>
