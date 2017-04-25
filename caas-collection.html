@@ -93,7 +93,8 @@
       },
 
       observers: [
-        '_resetUpdateInterval(trackChanges, autoUpdate, updateInterval)'
+        '_resetUpdateInterval(trackChanges, autoUpdate, updateInterval)',
+        '_documentsChanged(documents.splices)'
       ],
 
       read: function() {
@@ -109,10 +110,10 @@
 
       _handleDocumentUpdated: function(evt) {
         var documentId = evt.target.document.id;
-        var unsavedDocumentsIds = this._getChangedDocumentIds();
+        var unsavedDocumentsIds = this._getUnsavedDocumentIds();
         var existingIndex = unsavedDocumentsIds.indexOf(documentId);
         if(existingIndex !== -1) {
-          this._removeChangedDocument(this.unsavedDocuments[existingIndex]);
+          this._removeUnsavedDocument(this.unsavedDocuments[existingIndex]);
         }
       },
 
@@ -137,6 +138,10 @@
         }
       },
 
+      _documentsChanged: function(documentsSplices) {
+        console.log('_documentsChanged', documentsSplices);
+      },
+
       _diffDocuments: function() {
         if(!this._shadowDocuments || this._shadowDocuments.length === 0) {
           this.set('_shadowDocuments', []);
@@ -156,13 +161,13 @@
         var documentId = this.documents[i].id;
 
         if(masterDocument !== shadowDocument) {
-          this._addChangedDocument(documentId, i);
+          this._addUnsavedDocument(documentId, i);
           this._shadowDocuments[i] = masterDocument;
         }
       },
 
-      _addChangedDocument: function(documentId, i) {
-        var unsavedDocumentsIds = this._getChangedDocumentIds();
+      _addUnsavedDocument: function(documentId, i) {
+        var unsavedDocumentsIds = this._getUnsavedDocumentIds();
         var existingIndex = unsavedDocumentsIds.indexOf(documentId);
         if(existingIndex === -1) {
           this.push('unsavedDocuments', {
@@ -172,30 +177,41 @@
         }
       },
 
-      _removeChangedDocument: function(changedDocument) {
-        var unsavedDocumentsIds = this._getChangedDocumentIds();
-        var existingIndex = unsavedDocumentsIds.indexOf(changedDocument.id);
+      _removeUnsavedDocument: function(unsavedDocument) {
+        var unsavedDocumentsIds = this._getUnsavedDocumentIds();
+        var existingIndex = unsavedDocumentsIds.indexOf(unsavedDocument.id);
         this.splice('unsavedDocuments', existingIndex, 1);
       },
 
-      _getChangedDocumentIds: function(documentId) {
-        return this.unsavedDocuments.map(function(changedDocument) {
-          return changedDocument.id;
+      _getUnsavedDocumentIds: function(documentId) {
+        return this.unsavedDocuments.map(function(unsavedDocument) {
+          return unsavedDocument.id;
         })
       },
 
       _resetUpdateInterval: function(trackChanges, autoUpdate, updateInterval) {
+        this._diffDocuments();
         window.clearInterval(this._updateTimer);
-        this._diffDocuments();            
         if(!trackChanges) return;
         this._updateTimer = window.setInterval((function() {
           if(autoUpdate) {
             this.update();
           } else {
-            this._diffDocuments();            
+            this._diffDocuments();
           }
         }).bind(this), updateInterval);
-      }
+      },
+
+      _handleReadResponse: function(evt, data) {
+        var documents = evt.target.lastResponse;
+        this.set('documents', []);
+        this.set('_shadowDocuments', []);
+        for(var i=0;i<documents.length;i++) {
+          this.push('documents', documents[i]);
+          this.push('_shadowDocuments', JSON.stringify(this.documents[i]));
+        }
+        this.fire('read');
+      },
 
     });
   </script>
