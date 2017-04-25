@@ -56,6 +56,24 @@
           notify: true
         },
 
+        hasChanges: {
+          type: Boolean,
+          computed: '_computeHasChanges(changedDocuments.splices)',
+          observer: '_hasChangesChanged',
+          notify: true
+        },
+
+        changedDocuments: {
+          type: Array,
+          value: [],
+          notify: true
+        },
+
+        trackChanges: {
+          type: Boolean,
+          value: false
+        },
+
         updateInterval: {
           type: Number,
           value: 3000
@@ -73,7 +91,7 @@
       },
 
       observers: [
-        '_resetUpdateInterval(autoUpdate, updateInterval)'
+        '_resetUpdateInterval(trackChanges, autoUpdate, updateInterval)'
       ],
 
       read: function() {
@@ -81,27 +99,78 @@
       },
 
       update: function() {
-        for(var i in this.documents) {
-          this.updateItem(i);
+        this._diffDocuments();
+        while(this.changedDocuments.length > 0) {
+          this.updateItem(0);          
         }
       },
 
       updateItem: function(i) {
-        var masterDocument = JSON.stringify(this.documents[i]);
-        var shadowDocument = this._shadowDocuments[i];
-        
-        if(masterDocument === shadowDocument) return;
-
-        this._shadowDocuments[i] = masterDocument;
-        var caasDoc = this.querySelectorAll('caas-document')[i];
+        var documentIndex = this.changedDocuments[i].index;
+        var caasDoc = this.querySelectorAll('caas-document')[documentIndex];
+        this._removeChangedDocument(this.changedDocuments[i]);
         caasDoc.notifyProperties();
       },
 
-      _resetUpdateInterval: function(autoUpdate, updateInterval) {
-        window.clearInterval(this._updateTimer);
-        if(!autoUpdate) return;
-        this._updateTimer = window.setInterval((function() {
+      _computeHasChanges: function(changedDocumentsSplices) {
+        return (this.changedDocuments.length > 0);
+      },
+
+      _hasChangesChanged: function(hasChanges) {
+        if(hasChanges && this.autoUpdate) {
           this.update();
+        }
+      },
+
+      _diffDocuments: function() {
+        for(var i in this.documents) {
+          this._diffItem(i);
+        }
+      },
+
+      _diffItem: function(i) {
+        var masterDocument = JSON.stringify(this.documents[i]);
+        var shadowDocument = this._shadowDocuments[i];
+        var documentId = this.documents[i].id;
+
+        if(masterDocument !== shadowDocument) {
+          this._addChangedDocument(documentId, i);
+          this._shadowDocuments[i] = masterDocument;
+        }
+      },
+
+      _addChangedDocument: function(documentId, i) {
+        var changedDocumentsIds = this._getChangedDocumentIds();
+        var existingIndex = changedDocumentsIds.indexOf(documentId);
+        if(existingIndex === -1) {
+          this.push('changedDocuments', {
+            index: i,
+            id: documentId
+          });
+        }
+      },
+
+      _removeChangedDocument: function(changedDocument) {
+        var changedDocumentsIds = this._getChangedDocumentIds();
+        var existingIndex = changedDocumentsIds.indexOf(changedDocument.id);
+        this.splice('changedDocuments', existingIndex, 1);
+      },
+
+      _getChangedDocumentIds: function(documentId) {
+        return this.changedDocuments.map(function(changedDocument) {
+          return changedDocument.id;
+        })
+      },
+
+      _resetUpdateInterval: function(trackChanges, autoUpdate, updateInterval) {
+        window.clearInterval(this._updateTimer);
+        if(!trackChanges) return;
+        this._updateTimer = window.setInterval((function() {
+          if(autoUpdate) {
+            this.update();
+          } else {
+            this._diffDocuments();            
+          }
         }).bind(this), updateInterval);
       }
 
