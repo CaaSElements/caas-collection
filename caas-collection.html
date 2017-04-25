@@ -124,9 +124,10 @@
       },
 
       _handleAddedDocuments: function (addedCount, index, objects) {
+      _handleAddedDocuments: function (addedCount, index, documents) {
         for (var i=0; i < addedCount; i++) {
           var addedIndex = index + i;
-          var newDocument = objects[addedIndex];
+          var newDocument = documents[addedIndex];
 
           // if newDoc has an id, it's already somewhere in the database
           if(!newDocument.id) return this._sendAjaxRequest('create', newDocument);
