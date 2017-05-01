@@ -127,10 +127,28 @@
 
       save: function() {
         this._diffDocuments();
+        this.attemptSyncUnsavedDeletions()
+        this.attemptSyncUnsavedCreations()
         for(var i=0;i<this.unsavedDocuments.updates.length;i++) {
           this.updateItem(i);
         }
       },
+
+      attemptSyncUnsavedDeletions: function () {
+        var deletionsArray = this.unsavedDocuments.deletions;
+        for(var i=0;i< deletionsArray.length;i++) {
+          // TODO: has to wait on Ajax response before changing url
+          // this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletionsArray[i].id;                              
+          // this.delete(deletionsArray[i], i)
+        }        
+      },
+
+      attemptSyncUnsavedCreations: function () {
+        var creationssArray = this.unsavedDocuments.creations;
+        for(var i=0;i< creationssArray.length;i++) {
+          this._sendAjaxRequest('create', creationssArray[i]);
+        }        
+      },      
 
       _handleDocumentUpdated: function(evt) {
         var documentId = evt.target.document.id;
@@ -164,7 +182,7 @@
           this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
           this.delete(deletedDocument, removedIndex)
         }, this);
-      },
+      },      
 
       /**
       * Delete `document`
@@ -176,9 +194,7 @@
 
       _handleDeleteResponse: function (evt, deleteRequest) {
         this.fire('deleted');
-        // TODO -> in collections or in document? 
-        this.$.deleteDocument.route = "";
-        this.$.deleteDocument.body = "";
+
 
         var id = this._getDocumentIdFromAjaxRequest(deleteRequest)
         this._removeUnsavedDocument('deletions', this.unsavedDocuments.deletions[id]);
