@@ -37,6 +37,10 @@
           <button on-tap="changeFirstName">change #0 first name to 'Sam'</button><br>
           <button on-tap="update">update</button>
 
+          <button on-tap="create">create account manager</button>
+          <button on-tap="delete">delete account manager</button>
+          
+
           <ul>
           <template is="dom-repeat" items="[[documents]]" as="document">
             <li>[[document.firstName]] <strong>[[document.lastName]]</strong></li>
@@ -51,6 +55,14 @@
             demo.update = function() {
               caasCollection.save();
             }
+
+            demo.create = function() {
+              caasCollection.create({'firstName':'Wouter','lastName':'Vroege'});
+            }
+
+            demo.delete = function() {
+              caasCollection.deleteById(1);
+            }                        
           </script>
 
         </template>
