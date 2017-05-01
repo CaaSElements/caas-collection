@@ -280,7 +280,7 @@
         if(!this._shadowDocuments || this._shadowDocuments.length === 0) {
           this.set('_shadowDocuments', []);
           for(var i=0;i<this.documents.length;i++) {
-            this._shadowDocuments.push(JSON.stringify(this.documents[i]));
+            this._shadowDocuments.push(this.documents[i]);
           }
         } else {
           for(var i=0;i<this.documents.length;i++) {
@@ -291,8 +291,7 @@
 
       _diffItem: function(i) {
         var masterDocument = JSON.stringify(this.documents[i]);
-        var shadowDocument = this._shadowDocuments[i];
-        var documentId = this.documents[i].id;
+        var shadowDocument = JSON.stringify(this._shadowDocuments[i]);
 
         if(masterDocument !== shadowDocument) {
           this._addUnsavedDocument('updates', documentId);
@@ -359,7 +358,7 @@
         this.set('_shadowDocuments', []);
         for(var i=0;i<documents.length;i++) {
           this.push('documents', documents[i]);
-          this.push('_shadowDocuments', JSON.stringify(this.documents[i]));
+          this.push('_shadowDocuments', this.documents[i]);
         }
         this.fire('read');
       }
