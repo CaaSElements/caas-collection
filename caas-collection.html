@@ -40,6 +40,26 @@
         ></caas-document>
       </template>
 
+      <iron-ajax
+        id="createDocument"
+        headers="[[_requestHeaders]]"
+        url="[[apiEndpoint]]/[[route]]"
+        method="POST"
+        loading="{{creating}}"
+        on-response="_handleCreateResponse"
+        on-error="_handleCreateResponseError"
+      ></iron-ajax>      
+
+      <!--TODO Deze hier of in document?-->
+      <iron-ajax
+        id="deleteDocument"
+        headers="[[_requestHeaders]]"
+        method="DELETE"
+        loading="{{deleting}}"
+        on-response="_handleDeleteResponse"
+        on-error="_handleDeleteResponseError"
+      ></iron-ajax>
+
   </template>
   <script>
     Polymer({
@@ -121,9 +141,79 @@
         }
       },
 
-      _handleDocumentUpdateError: function(evt) {
-        //console.log('_handleDocumentUpdateError', evt.target.document);
+      _documentsChanged: function (documentsSplices) {
+        if (documentsSplices) {
+          var indexSplices = documentsSplices.indexSplices;
+
+          // indexSplices.length is always 1
+          var changes = indexSplices[0];
+
+          this._handleRemovedDocuments(changes.removed, changes.index)
+          this._handleAddedDocuments(changes.addedCount, changes.index, changes.object)
+        }
+      },   
+
+      _handleRemovedDocuments: function (deletedDocuments, index) {
+        // Multiple documents can be removed with one splice
+        deletedDocuments.forEach(function(deletedDocument, i) {
+          var removedIndex = index + i;
+
+          this._addUnsavedDocument('deletions', deletedDocument, removedIndex);
+
+          // TODO -> in collections or in document? 
+          this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
+          this.delete(deletedDocument, removedIndex)
+        }, this);
       },
+
+      /**
+      * Delete `document`
+      */
+      delete: function(deletedDocument, removedIndex) {
+        this._addUnsavedDocument('deletions', deletedDocument, removedIndex);          
+        this._sendAjaxRequest('delete');
+      },                   
+
+      _handleDeleteResponse: function (evt, deleteRequest) {
+        this.fire('deleted');
+        // TODO -> in collections or in document? 
+        this.$.deleteDocument.route = "";
+        this.$.deleteDocument.body = "";
+
+        var id = this._getDocumentIdFromAjaxRequest(deleteRequest)
+        this._removeUnsavedDocument('deletions', this.unsavedDocuments.deletions[id]);
+      },
+
+      _handleDeleteResponseError: function(evt, failedDeleteRequest) {
+        this._fireErrorEvent('delete', 'deletions', failedDeleteRequest)
+      },      
+
+      _handleAddedDocuments: function (addedCount, index, documents) {
+        for (var i=0; i < addedCount; i++) {
+          var addedIndex = index + i;
+          var newDocument = documents[addedIndex];
+
+          // if newDoc has an id, it's already somewhere in the database
+          if(!newDocument.id) {
+
+            // TODO newDocument.id has no id at this point!
+            this._addUnsavedDocument('creations', newDocument, addedIndex);          
+            return this._sendAjaxRequest('create', newDocument);
+          }
+        }
+      },
+         
+      _handleCreateResponse: function(evt, creationRequest) {
+        this.fire('created');
+        
+        var createdDocumentId = this._getDocumentIdFromAjaxRequest(creationRequest)
+        this._removeUnsavedDocument('creations', this.unsavedDocuments.creations[createdDocumentId]);
+        
+      },      
+
+      _handleCreateResponseError: function(evt, failedCreationRequest) {
+        this._fireErrorEvent('create', 'creations', failedCreationRequest)
+      },          
 
       updateItem: function(i) {
         var documentIndex = this.unsavedDocuments.updates[i].index;
@@ -131,6 +221,15 @@
         caasDoc.notifyProperties();
         caasDoc.update();
       },
+
+      // TODO more information?
+      _handleDocumentUpdate: function(evt) {
+        this.fire('updated');        
+      },      
+
+      _handleDocumentUpdateError: function(evt, updateRequest) {
+        this._fireErrorEvent('update', 'updates', updateRequest)
+      },   
 
       _computeHasChanges: function(unsavedDocumentsSplices) {
         for(var changeCategory in this.unsavedDocuments) {
@@ -143,10 +242,6 @@
         if(hasChanges && this.autoUpdate) {
           this.save();
         }
-      },
-
-      _documentsChanged: function(documentsSplices) {
-        console.log('_documentsChanged', documentsSplices);
       },
 
       _diffDocuments: function() {
@@ -173,19 +268,27 @@
         }
       },
 
-      _addUnsavedDocument: function(changeCategory, documentId, i) {
-        var unsavedDocumentsIds = this._getUnsavedDocumentIds(changeCategory);
-        var existingIndex = unsavedDocumentsIds.indexOf(documentId);
+      _addUnsavedDocument: function(changeCategory, newUnsavedDoc, i) {
+        var existingIndex = this._computeUnsavedDocumentIndex(changeCategory, newUnsavedDoc.id);
         if(existingIndex === -1) {
           this.push('unsavedDocuments.' + changeCategory , {
             index: i,
-            id: documentId
+            id: newUnsavedDoc.id,
+            doc: newUnsavedDoc
           });
         }
       },
 
+      // returns index of document in a category Array of unsavedDocuments or -1 if documents doesn't exist in the Array.
+      _computeUnsavedDocumentIndex: function (category, id) {
+        if(!category) return console.error('no category provided');
+        var unsavedDocumentsIds = this._getUnsavedDocumentIds(category);
+        var index = unsavedDocumentsIds.indexOf(id);
+        return index;
+      },
+
       _removeUnsavedDocument: function(changeCategory, unsavedDocument) {
-        var unsavedDocumentsIds = this._getUnsavedDocumentIds('updates');
+        var unsavedDocumentsIds = this._getUnsavedDocumentIds(changeCategory);
         var existingIndex = unsavedDocumentsIds.indexOf(unsavedDocument.id);
         this.splice('unsavedDocuments.' + changeCategory, existingIndex, 1);
       },
@@ -196,6 +299,16 @@
         })
       },
 
+      _fireErrorEvent: function (errorType, changeCategory, request) {
+        var errorDocumentId = this._getDocumentIdFromAjaxRequest(updateRequest);
+        var index = this._computeUnsavedDocumentIndex(changeCategory, errorDocumentId);
+        var changedArray = this.unsavedDocuments[changeCategory];
+
+        var errorDocument = changedArray[index] || {};
+        this.fire( errorType + '-error', {'error': this._parseErrorObject(evt), 'document': errorDocument.doc, 'id': errorDocument.id});            
+      },      
+
+      // TODO add check for creations/deletions on interval
       _resetUpdateInterval: function(trackChanges, autoUpdate, updateInterval) {
         this._diffDocuments();
         window.clearInterval(this._updateTimer);
@@ -218,7 +331,9 @@
           this.push('_shadowDocuments', JSON.stringify(this.documents[i]));
         }
         this.fire('read');
-      },
+      }
+
+      // TODO Update event documentation in crud-behavior (doc & id now also sent with error)
 
     });
   </script>
