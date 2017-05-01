@@ -210,7 +210,7 @@
           this._addUnsavedDocument('deletions', deletedDocument);
           // TODO -> in collections or in document? 
           this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
-          this.delete(deletedDocument, removedIndex)
+          this._sendAjaxRequest('delete');
         }, this);
       },              
       
