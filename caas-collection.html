@@ -145,6 +145,26 @@
         caasDoc.notifyProperties();
         caasDoc.update();
       },      
+
+      /**
+      * Delete `document`
+      */
+      deleteById: function(id) {        
+        var documentIds = this.documents.map(function(doc) {          
+          return doc.id;
+        })    
+        var shadowDocumentsIds = this._shadowDocuments.map(function(shadowDoc) {
+          return shadowDoc.id;
+        })     
+                    
+        var index = documentIds.indexOf(id);  
+        var shadowIndex = shadowDocumentsIds.indexOf(id); 
+        
+        if(index == -1) return;
+        this.splice('documents', index, 1)
+        this.splice('_shadowDocuments', shadowIndex, 1)
+      },          
+
       attemptSyncUnsavedDeletions: function () {
         var deletionsArray = this.unsavedDocuments.deletions;
         for(var i=0;i< deletionsArray.length;i++) {
@@ -193,16 +213,8 @@
           this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
           this.delete(deletedDocument, removedIndex)
         }, this);
-      },      
-
-      /**
-      * Delete `document`
-      */
-      delete: function(deletedDocument, removedIndex) {
-        this._addUnsavedDocument('deletions', deletedDocument);          
-        this._sendAjaxRequest('delete');
-      },                   
-
+      },              
+      
       _handleDeleteResponse: function (evt, deleteRequest) {
         this.fire('deleted');
 
