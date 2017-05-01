@@ -139,6 +139,12 @@
         }
       },
 
+      updateItem: function(i) {
+        var documentIndex = this.unsavedDocuments.updates[i].index;
+        var caasDoc = this.querySelectorAll('caas-document')[documentIndex];
+        caasDoc.notifyProperties();
+        caasDoc.update();
+      },      
       attemptSyncUnsavedDeletions: function () {
         var deletionsArray = this.unsavedDocuments.deletions;
         for(var i=0;i< deletionsArray.length;i++) {
@@ -235,13 +241,6 @@
       _handleCreateResponseError: function(evt, failedCreationRequest) {
         this._fireErrorEvent(evt, 'create', 'creations', failedCreationRequest)
       },          
-
-      updateItem: function(i) {
-        var documentIndex = this.unsavedDocuments.updates[i].index;
-        var caasDoc = this.querySelectorAll('caas-document')[documentIndex];
-        caasDoc.notifyProperties();
-        caasDoc.update();
-      },
 
       // TODO more information?
       _handleDocumentUpdate: function(evt) {
