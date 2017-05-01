@@ -201,7 +201,7 @@
       },
 
       _handleDeleteResponseError: function(evt, failedDeleteRequest) {
-        this._fireErrorEvent('delete', 'deletions', failedDeleteRequest)
+        this._fireErrorEvent(evt, 'delete', 'deletions', failedDeleteRequest)
       },      
 
       _handleAddedDocuments: function (addedCount, index, documents) {
@@ -228,7 +228,7 @@
       },      
 
       _handleCreateResponseError: function(evt, failedCreationRequest) {
-        this._fireErrorEvent('create', 'creations', failedCreationRequest)
+        this._fireErrorEvent(evt, 'create', 'creations', failedCreationRequest)
       },          
 
       updateItem: function(i) {
@@ -244,7 +244,7 @@
       },      
 
       _handleDocumentUpdateError: function(evt, updateRequest) {
-        this._fireErrorEvent('update', 'updates', updateRequest)
+        this._fireErrorEvent(evt, 'update', 'updates', updateRequest)
       },   
 
       _computeHasChanges: function(unsavedDocumentsSplices) {
