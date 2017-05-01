@@ -121,6 +121,11 @@
         '_documentsChanged(documents.splices)'
       ],
 
+      create: function(doc) {
+        this.push('documents', doc)
+        this.push('_shadowDocuments', doc)
+      },  
+
       read: function() {
         this._sendAjaxRequest('read');
       },
