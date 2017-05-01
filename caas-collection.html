@@ -314,8 +314,8 @@
         })
       },
 
-      _fireErrorEvent: function (errorType, changeCategory, request) {
-        var errorDocumentId = this._getDocumentIdFromAjaxRequest(updateRequest);
+      _fireErrorEvent: function (evt, errorType, changeCategory, request) {
+        var errorDocumentId = this._getDocumentIdFromAjaxRequest(request);
         var index = this._computeUnsavedDocumentIndex(changeCategory, errorDocumentId);
         var changedArray = this.unsavedDocuments[changeCategory];
 
