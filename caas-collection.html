@@ -169,8 +169,8 @@
         var deletionsArray = this.unsavedDocuments.deletions;
         for(var i=0;i< deletionsArray.length;i++) {
           // TODO: has to wait on Ajax response before changing url
-          // this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletionsArray[i].id;                              
-          // this.delete(deletionsArray[i], i)
+          this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletionsArray[i].id;                              
+          this._sendAjaxRequest('delete');
         }        
       },
 
@@ -208,16 +208,15 @@
           var removedIndex = index + i;
 
           this._addUnsavedDocument('deletions', deletedDocument);
-
           // TODO -> in collections or in document? 
           this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
           this.delete(deletedDocument, removedIndex)
         }, this);
       },              
       
+        
       _handleDeleteResponse: function (evt, deleteRequest) {
         this.fire('deleted');
-
 
         var id = this._getDocumentIdFromAjaxRequest(deleteRequest)
         this._removeUnsavedDocument('deletions', this.unsavedDocuments.deletions[id]);
@@ -302,6 +301,7 @@
       _addUnsavedDocument: function(changeCategory, newUnsavedDoc) {
         var existingIndex = this._computeUnsavedDocumentIndex(changeCategory, newUnsavedDoc.id);
         if(existingIndex === -1) {
+          // TODO created documents don't have id yet
           this.push('unsavedDocuments.' + changeCategory , {
             id: newUnsavedDoc.id,
             doc: newUnsavedDoc
@@ -338,7 +338,6 @@
         this.fire( errorType + '-error', {'error': this._parseErrorObject(evt), 'document': errorDocument.doc, 'id': errorDocument.id});            
       },      
 
-      // TODO add check for creations/deletions on interval
       _resetUpdateInterval: function(trackChanges, autoUpdate, updateInterval) {
         this._diffDocuments();
         window.clearInterval(this._updateTimer);
