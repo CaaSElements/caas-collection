@@ -294,7 +294,7 @@
         var shadowDocument = JSON.stringify(this._shadowDocuments[i]);
 
         if(masterDocument !== shadowDocument) {
-          this._addUnsavedDocument('updates', documentId);
+          this._addUnsavedDocument('updates', this.documents[i]);
           this._shadowDocuments[i] = masterDocument;
         }
       },
