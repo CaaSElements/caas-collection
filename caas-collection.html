@@ -176,7 +176,7 @@
         deletedDocuments.forEach(function(deletedDocument, i) {
           var removedIndex = index + i;
 
-          this._addUnsavedDocument('deletions', deletedDocument, removedIndex);
+          this._addUnsavedDocument('deletions', deletedDocument);
 
           // TODO -> in collections or in document? 
           this.$.deleteDocument.url = this.apiEndpoint + '/' + this.route + '/' + deletedDocument.id;                              
@@ -188,7 +188,7 @@
       * Delete `document`
       */
       delete: function(deletedDocument, removedIndex) {
-        this._addUnsavedDocument('deletions', deletedDocument, removedIndex);          
+        this._addUnsavedDocument('deletions', deletedDocument);          
         this._sendAjaxRequest('delete');
       },                   
 
@@ -213,7 +213,7 @@
           if(!newDocument.id) {
 
             // TODO newDocument.id has no id at this point!
-            this._addUnsavedDocument('creations', newDocument, addedIndex);          
+            this._addUnsavedDocument('creations', newDocument);          
             return this._sendAjaxRequest('create', newDocument);
           }
         }
@@ -279,16 +279,15 @@
         var documentId = this.documents[i].id;
 
         if(masterDocument !== shadowDocument) {
-          this._addUnsavedDocument('updates', documentId, i);
+          this._addUnsavedDocument('updates', documentId);
           this._shadowDocuments[i] = masterDocument;
         }
       },
 
-      _addUnsavedDocument: function(changeCategory, newUnsavedDoc, i) {
+      _addUnsavedDocument: function(changeCategory, newUnsavedDoc) {
         var existingIndex = this._computeUnsavedDocumentIndex(changeCategory, newUnsavedDoc.id);
         if(existingIndex === -1) {
           this.push('unsavedDocuments.' + changeCategory , {
-            index: i,
             id: newUnsavedDoc.id,
             doc: newUnsavedDoc
           });
